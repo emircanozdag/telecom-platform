@@ -81,6 +81,8 @@ curl -s localhost:8000/api/notifications/<id>
 | UI | URL |
 |---|---|
 | RabbitMQ management | http://localhost:15672 (guest / guest) |
+| PostgreSQL | localhost:5433 (telecom / telecom) |
+| Kafka (from the host) | localhost:9094 |
 
 The credentials in `docker-compose.yml` and `appsettings.json` are for local development only.
 
