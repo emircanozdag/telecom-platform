@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      # Integration tests start PostgreSQL via Testcontainers; Docker is available on GitHub runners.
+      - name: Test
+        run: dotnet test --no-build -c Release --logger "trx" --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/**"
+
+  docker-images:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    strategy:
+      matrix:
+        service:
+          - { project: src/Services/Subscriber/Subscriber.Api/Subscriber.Api.csproj, assembly: Subscriber.Api }
+          - { project: src/Services/Billing/Billing.Api/Billing.Api.csproj, assembly: Billing.Api }
+          - { project: src/Services/Notification/Notification.Api/Notification.Api.csproj, assembly: Notification.Api }
+          - { project: src/Gateway/Gateway.Api/Gateway.Api.csproj, assembly: Gateway.Api }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: >
+          docker build .
+          --build-arg PROJECT=${{ matrix.service.project }}
+          --build-arg ASSEMBLY=${{ matrix.service.assembly }}
+          -t telecom-platform/${{ matrix.service.assembly }}:${{ github.sha }}

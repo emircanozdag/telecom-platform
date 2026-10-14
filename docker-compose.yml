@@ -1,0 +1,122 @@
+name: telecom-platform
+
+x-service: &service
+  build:
+    context: .
+  restart: unless-stopped
+  environment: &service-env
+    Kafka__BootstrapServers: kafka:9092
+  depends_on: &service-deps
+    postgres:
+      condition: service_healthy
+    kafka:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: telecom
+      POSTGRES_PASSWORD: telecom
+    ports: ["5432:5432"]
+    volumes:
+      - ./deploy/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telecom"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.7
+    ports: ["9094:9094"]
+    environment:
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: 3
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  subscriber:
+    <<: *service
+    build:
+      context: .
+      args:
+        PROJECT: src/Services/Subscriber/Subscriber.Api/Subscriber.Api.csproj
+        ASSEMBLY: Subscriber.Api
+    environment:
+      <<: *service-env
+      ConnectionStrings__Postgres: Host=postgres;Database=subscriber_db;Username=telecom;Password=telecom
+      ConnectionStrings__Redis: redis:6379
+    depends_on:
+      <<: *service-deps
+      redis:
+        condition: service_healthy
+
+  billing:
+    <<: *service
+    build:
+      context: .
+      args:
+        PROJECT: src/Services/Billing/Billing.Api/Billing.Api.csproj
+        ASSEMBLY: Billing.Api
+    environment:
+      <<: *service-env
+      ConnectionStrings__Postgres: Host=postgres;Database=billing_db;Username=telecom;Password=telecom
+
+  notification:
+    <<: *service
+    build:
+      context: .
+      args:
+        PROJECT: src/Services/Notification/Notification.Api/Notification.Api.csproj
+        ASSEMBLY: Notification.Api
+    environment:
+      <<: *service-env
+      ConnectionStrings__Postgres: Host=postgres;Database=notification_db;Username=telecom;Password=telecom
+      RabbitMq__Uri: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      <<: *service-deps
+      rabbitmq:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      args:
+        PROJECT: src/Gateway/Gateway.Api/Gateway.Api.csproj
+        ASSEMBLY: Gateway.Api
+    restart: unless-stopped
+    ports: ["8000:8080"]
+    environment:
+      ReverseProxy__Clusters__subscriber__Destinations__d1__Address: http://subscriber:8080
+      ReverseProxy__Clusters__billing__Destinations__d1__Address: http://billing:8080
+      ReverseProxy__Clusters__notification__Destinations__d1__Address: http://notification:8080
+    depends_on: [subscriber, billing, notification]
+
+volumes:
+  postgres-data:
