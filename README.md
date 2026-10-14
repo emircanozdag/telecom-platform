@@ -1,5 +1,7 @@
 # Telecom Usage & Notification Platform
 
+[![CI](https://github.com/emircanozdag/telecom-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/emircanozdag/telecom-platform/actions/workflows/ci.yml)
+
 An event-driven microservice system in **.NET 8** that tracks mobile data usage, bills overage and alerts subscribers when they approach their quota — the kind of flow a telecom operator runs at scale.
 
 Built to show production patterns rather than CRUD: a transactional outbox, idempotent consumers, optimistic concurrency, retry and dead-letter queues, cache-aside, and per-service databases.
