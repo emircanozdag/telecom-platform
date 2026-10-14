@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Pin transitive versions too, so every project resolves the same EF Core build. -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Messaging -->
+    <PackageVersion Include="Confluent.Kafka" Version="2.5.3" />
+    <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
+    <!-- Data -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.7" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.1" />
+    <!-- Web -->
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.1.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="8.0.0" />
+    <!-- Tests -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageVersion Include="xunit" Version="2.5.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.7" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="3.10.0" />
+  </ItemGroup>
+</Project>
