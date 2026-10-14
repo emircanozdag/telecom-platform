@@ -38,10 +38,10 @@ jobs:
     strategy:
       matrix:
         service:
-          - { project: src/Services/Subscriber/Subscriber.Api/Subscriber.Api.csproj, assembly: Subscriber.Api }
-          - { project: src/Services/Billing/Billing.Api/Billing.Api.csproj, assembly: Billing.Api }
-          - { project: src/Services/Notification/Notification.Api/Notification.Api.csproj, assembly: Notification.Api }
-          - { project: src/Gateway/Gateway.Api/Gateway.Api.csproj, assembly: Gateway.Api }
+          - { project: src/Services/Subscriber/Subscriber.Api/Subscriber.Api.csproj, assembly: Subscriber.Api, image: subscriber }
+          - { project: src/Services/Billing/Billing.Api/Billing.Api.csproj, assembly: Billing.Api, image: billing }
+          - { project: src/Services/Notification/Notification.Api/Notification.Api.csproj, assembly: Notification.Api, image: notification }
+          - { project: src/Gateway/Gateway.Api/Gateway.Api.csproj, assembly: Gateway.Api, image: gateway }
     steps:
       - uses: actions/checkout@v4
       - name: Build image
@@ -49,4 +49,4 @@ jobs:
           docker build .
           --build-arg PROJECT=${{ matrix.service.project }}
           --build-arg ASSEMBLY=${{ matrix.service.assembly }}
-          -t telecom-platform/${{ matrix.service.assembly }}:${{ github.sha }}
+          -t telecom-platform/${{ matrix.service.image }}:${{ github.sha }}
