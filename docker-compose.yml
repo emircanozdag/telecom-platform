@@ -9,8 +9,8 @@ x-service: &service
   depends_on: &service-deps
     postgres:
       condition: service_healthy
-    kafka:
-      condition: service_healthy
+    kafka-init:
+      condition: service_completed_successfully
 
 services:
   postgres:
@@ -56,6 +56,20 @@ services:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
       interval: 10s
       retries: 10
+
+  # Creates topics up front so consumers never subscribe to a topic that doesn't exist yet.
+  kafka-init:
+    image: apache/kafka:3.7.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for topic in telecom.usage.recorded telecom.quota.threshold-reached; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
+        done
+    restart: "no"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine

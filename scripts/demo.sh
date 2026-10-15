@@ -27,13 +27,24 @@ curl -s -X POST "$GATEWAY/api/subscribers/$ID/usage" -H 'Content-Type: applicati
 step "Use 1000 MB more -> quota exceeded, 480 MB billed as overage"
 curl -s -X POST "$GATEWAY/api/subscribers/$ID/usage" -H 'Content-Type: application/json' -d '{"megabytes":1000}' | json
 
-step "Waiting for events to flow through Kafka and RabbitMQ..."
-sleep 8
+# Billing and notifications are eventually consistent: poll until the events have been processed.
+wait_for() { # url, python expression on the parsed JSON that must be true
+  for _ in $(seq 1 30); do
+    body=$(curl -s "$1")
+    if echo "$body" | python3 -c "import sys, json; d = json.load(sys.stdin); sys.exit(0 if ($2) else 1)" 2>/dev/null; then
+      echo "$body" | json
+      return
+    fi
+    sleep 1
+  done
+  echo "Timed out waiting for $1" >&2
+  echo "$body" | json
+}
 
 step "Invoice (Billing service, built from Kafka events)"
-curl -s "$GATEWAY/api/billing/$ID/invoices" | json
+wait_for "$GATEWAY/api/billing/$ID/invoices" "len(d) == 1 and d[0]['usageRecordCount'] == 2"
 
 step "Notifications sent (Notification service, via RabbitMQ)"
-curl -s "$GATEWAY/api/notifications/$ID" | json
+wait_for "$GATEWAY/api/notifications/$ID" "len(d) == 4"
 
 printf '\nSubscriber ID: %s\n' "$ID"
