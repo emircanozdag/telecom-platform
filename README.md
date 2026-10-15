@@ -60,7 +60,13 @@ Requirements: Docker. The .NET 8 SDK is only needed to run the tests or the serv
 docker compose up --build
 ```
 
-Then, through the gateway on `http://localhost:8000`:
+Then run the whole scenario in one go:
+
+```bash
+./scripts/demo.sh
+```
+
+Or step by step, through the gateway on `http://localhost:8000`:
 
 ```bash
 # Create a subscriber on the 5 GB plan
